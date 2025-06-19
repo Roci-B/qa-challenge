@@ -1,0 +1,8 @@
+const { test, expect } = require('@playwright/test');
+
+test('TC01 - Verify that the Search input is displayed', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+  const searchInput = page.getByPlaceholder('Search'); // O ajustá según tu frontend
+  await expect(searchInput).toBeVisible();
+});
+
