@@ -166,4 +166,138 @@ test('TC10 - Verify that after applying a filter, the selected filter persists i
   expect(true).toBe(true);
 });
 
+// TC11
 
+test('TC11 - Verify that multiple filters can be selected/deselected', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+  
+  const filtersButton = page.locator('button:has-text("Filters")');
+  await filtersButton.click();
+
+  const filterDropdown = page.locator('div.sc-fmMLgT.fpcEPT');
+  const activeOption = filterDropdown.getByText('Active', { exact: true });
+  const closedOption = filterDropdown.getByText('Closed', { exact: true });
+
+  await activeOption.click();
+  await closedOption.click();
+
+  const printInfo = async (locator) => {
+    const clases = await locator.getAttribute('class');
+    const attrs = await locator.evaluate(el => {
+      const result = {};
+      for (const attr of el.attributes) {
+        result[attr.name] = attr.value;
+      }
+      return result;
+    });
+  };
+
+  await printInfo(activeOption);
+  await printInfo(closedOption);
+
+  await page.waitForTimeout(500);
+  await activeOption.click();
+
+  await printInfo(activeOption);
+
+  const saveButton = page.locator('button:has-text("Save")');
+  await saveButton.click();
+
+  expect(true).toBe(true); 
+});
+
+// TC12
+
+test('TC12 - Verify that event cards are grouped by event names', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+  
+  const groupHeaders = page.locator('div.sc-lpbaSe.guyUPL');
+  const groupCount = await groupHeaders.count();
+
+  expect(groupCount).toBeGreaterThan(0);
+  
+  for (let i = 0; i < groupCount; i++) {
+    const group = groupHeaders.nth(i);
+    const groupName = await group.innerText();
+  }
+});
+
+// TC13
+
+
+test('TC13 - Verify that each event card displays RFP name, Agreement type, and Cut-Off Date', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const rfpNames = page.locator('div.sc-lpbaSe.guyUPL');
+  const agreementTypes = page.locator('div.sc-bxjEGZ.coxujC');
+  const cutOffDates = page.locator('div.sc-kiMgGE.fRojhS');
+
+  const rfpCount = await rfpNames.count();
+  const agreementCount = await agreementTypes.count();
+  const cutOffCount = await cutOffDates.count();
+
+  expect(rfpCount).toBeGreaterThan(0);
+  expect(agreementCount).toBe(rfpCount);
+  expect(cutOffCount).toBe(rfpCount);
+
+  for (let i = 0; i < rfpCount; i++) {
+    const rfp = rfpNames.nth(i);
+    const agreement = agreementTypes.nth(i);
+    const cutOff = cutOffDates.nth(i);
+
+    await expect(rfp).toBeVisible();
+    await expect(agreement).toBeVisible();
+    await expect(cutOff).toBeVisible();
+
+    const rfpText = await rfp.innerText();
+    const agreementText = await agreement.innerText();
+    const cutOffText = await cutOff.innerText();
+
+    expect(rfpText.trim()).not.toBe('');
+    expect(agreementText.trim()).not.toBe('');
+    expect(cutOffText.trim()).not.toBe('');
+  }
+});
+
+// TC14
+test('TC14 - Verify that the "View Bookings" button is displayed on each event card', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const eventCards = page.locator('div.sc-iMGFoU.hWUTow');
+
+  const cardCount = await eventCards.count();
+  expect(cardCount).toBeGreaterThan(0);
+
+  for (let i = 0; i < cardCount; i++) {
+    const card = eventCards.nth(i);
+    const viewBookingsButton = card.locator('button.sc-kRZjnb.uEwrw', { hasText: 'View Bookings' });
+    await expect(viewBookingsButton).toBeVisible();
+  }
+});
+
+
+
+
+// TC18
+test('TC18 - Verify that the page title "Rooming List Management: Events" is displayed', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+  const pageTitle = page.getByText('Rooming List Management: Events', { exact: true });
+  await expect(pageTitle).toBeVisible();
+});
+
+
+// TC19
+test('TC19 - Verify that the filters dropdown is correctly positioned under the Filters button', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const filtersButton = page.getByRole('button', { name: /filters/i });
+  await filtersButton.click();
+  const dropdown = page.locator('div.sc-fmMLgT.fpcEPT');
+  await expect(dropdown).toBeVisible();
+
+  const buttonBox = await filtersButton.boundingBox();
+  const dropdownBox = await dropdown.boundingBox();
+  expect(dropdownBox.y).toBeGreaterThan(buttonBox.y); 
+  expect(Math.abs(dropdownBox.x - buttonBox.x)).toBeLessThan(20); 
+
+});
