@@ -466,6 +466,47 @@ test('TC21 - Verify the behavior when no events are available', async ({ page })
   await expect(eventCards).toHaveCount(0); // Assert no cards are visible
 });
 
+//TC22
+test('TC22 - Verify if search and filters work together', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list'); // Navigate to the rooming list page
+
+  await page.locator('#root > div > div > header > div > div > div.sc-cLAbsH.iFIBtw > button').click(); // Click on the Filters button to open filter options
+
+  const filtersDropdown = page.locator('#root > div > div > header > div > div > div.sc-cLAbsH.iFIBtw > div'); // Locate the filters dropdown container
+  await expect(filtersDropdown).toBeVisible(); // Assert that the filters dropdown is visible
+  await filtersDropdown.getByText('Active', { exact: true }).click(); // Select the "Active" filter option
+  await filtersDropdown.getByText('Closed', { exact: true }).click(); // Deselect the "Closed" filter option if selected
+
+  await page.getByRole('button', { name: /save/i }).click(); // Click the Save button to apply filters
+
+  const searchInput = page.getByPlaceholder('Search'); // Locate the search input by its placeholder text
+  await searchInput.fill('ACL'); // Fill the search input with the text 'ACL'
+  await page.keyboard.press('Enter'); // Press Enter key to trigger the search
+
+  const results = page.locator('div.sc-iMGFoU.hWUTow'); // Locate all event cards in the results
+  await results.first().waitFor({ state: 'visible', timeout: 5000 }); // Wait for the first result card to be visible to ensure results are loaded
+
+  const count = await results.count(); // Get the number of event cards found
+  expect(count).toBeGreaterThan(0); // Assert that at least one result is present
+
+  for (let i = 0; i < count; i++) {
+    const card = results.nth(i); // Select the i-th event card
+    const nameLocator = card.locator('div.sc-lpbaSe.guyUPL'); // Locate the element containing the event name inside the card
+    const isVisible = await nameLocator.isVisible(); // Check if the event name element is visible
+    if (!isVisible) {
+      continue;  // Skip this card if the event name is not visible
+    }
+    const nameText = (await nameLocator.innerText()).toLowerCase(); // Get the text content of the event name and convert to lowercase
+    expect(nameText).toContain('acl'); // Assert that the event name contains 'acl'
+
+    const statusLocator = card.locator('div[status="Active"]'); // Locate the status element with attribute status="Active" inside the card
+    await expect(statusLocator).toBeVisible(); // Assert that the status element is visible
+    const statusText = (await statusLocator.innerText()).toLowerCase(); // Get the text content of the status element and convert to lowercase
+    expect(statusText).toBe('active'); // Assert that the status text is exactly 'active'
+  }
+});
+
+
 // TC23
 test('TC23 - Verify UI responsiveness (only mobile scroll)', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
