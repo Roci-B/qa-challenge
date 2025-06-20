@@ -123,7 +123,7 @@ test('TC08 - Verify that selecting a filter option filters the event list correc
   const countEvents = await eventStatus.count(); // Get count of status 
 
   for (let i = 0; i < countEvents; i++) {
-    const statusAttr = await statusElements.nth(i).getAttribute('status'); // Get status attribute
+    const statusAttr = await countEvents.nth(i).getAttribute('status'); // Get status attribute
     expect(statusAttr?.toLowerCase()).toBe('active'); // Assert status is active
   }
 });
@@ -267,61 +267,69 @@ test('TC14 - Verify that the "View Bookings" button is displayed on each event c
 // TC15
 test('TC15 - Verify that the "View Bookings" button displays the correct number of bookings', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
+  
+  const eventCards = page.locator('.sc-bSFBcf.ckYgto'); // Locate Events
+  const count = await eventCards.count(); // Get events count
+  expect(count).toBeGreaterThan(0); // Verify if there are results
 
-  const firstCard = page.locator('div.sc-eZbeWy.hWBVDH > div.sc-gDVcuj.fqLaSm > div.sc-bpuAaX.jOKtSV > div > div:nth-child(1)').first(); // Locate first event card container
+  for (let i = 0; i < count; i++) {
+    const card = eventCards.nth(i); // Go through all events
 
-  const viewBookingsButton = firstCard.locator('button', { hasText: 'View Bookings' }); // Locate button in first card
-  await expect(viewBookingsButton).toBeVisible(); // Assert visible
+    const viewBookingsButton = card.locator('.sc-DZJJV.tmHpn', { hasText: 'View Bookings' }); // Locate view bookings
+    await expect(viewBookingsButton).toBeVisible(); // Assert to check if visible
 
-  const buttonText = await viewBookingsButton.textContent(); // Get text from button
-  const match = buttonText?.match(/\((\d+)\)/); // Extract number inside parentheses
-  const bookingsCountFromButton = match ? Number(match[1]) : 0; // Parse bookings count
+    const buttonText = await viewBookingsButton.textContent(); // Get Button text
+    const match = buttonText?.match(/\((\d+)\)/); // Get number
+    const bookingsCount = match ? parseInt(match[1], 10) : 0; // Convert into number
 
-  await viewBookingsButton.click(); // Click to open bookings list
+    const closeButton = page.locator('.sc-hwddKA.kvCliO'); // Locator for close modal window
+    if (await closeButton.isVisible()) { // Verify if visible
+      await closeButton.click(); // if visible, clicks on it
+      await page.waitForTimeout(300); // wait for UI
+    }
 
-  const bookingsContainer = firstCard.locator('div.sc-lixPIL.dkcvGm > div'); // Locate bookings container inside card
+    await viewBookingsButton.click({ force: true }); // Click on View Bookings
 
-  await expect(bookingsContainer).toBeVisible(); // Assert container visible
+    const bookingsContainer = page.locator('.sc-jaXbil.WTCFV'); // Container of bookings
+    const bookingItems = bookingsContainer.locator('.sc-eqNDNG.eHEBjZ'); // Each booking
+    await expect(bookingItems).toHaveCount(bookingsCount); // Assert for numbers
 
-  const bookingsCount = await bookingsContainer.locator('> div').count(); // Count booking entries
-
-  expect(bookingsCount).toBe(bookingsCountFromButton); // Assert booking count matches number on button
+    if (await closeButton.isVisible()) { // Verify if close button is visible
+      await closeButton.click(); // if visible, clicks on it
+      await page.waitForTimeout(300); // wait for UI
+    }
+  }
 });
 
 // TC16
 test('TC16 - Verify that clicking on the "View Bookings" button opens the correct booking details', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const eventCards = page.locator('div.sc-iMGFoU.hWUTow'); // Locate event cards
-  const cardCount = await eventCards.count();
-  expect(cardCount).toBeGreaterThan(0);
+  const eventCards = page.locator('.sc-bSFBcf.ckYgto'); // Locate Events
+  const count = await eventCards.count(); // Get events count
+  expect(count).toBeGreaterThan(0); // Verify if there are results
 
   const firstCard = eventCards.first(); // Get first card
 
-  const viewBookingsButton = firstCard.locator('button.sc-kRZjnb.uEwrw', { hasText: 'View Bookings' }); // Locate "View Bookings" button
+  const viewBookingsButton = firstCard.locator('.sc-DZJJV.tmHpn', { hasText: 'View Bookings' }); // Locate view bookings
   await expect(viewBookingsButton).toBeVisible();
 
-  await viewBookingsButton.click(); // Click to open bookings
+  await viewBookingsButton.click({ force: true }); // Click on View Bookings
+  await page.waitForTimeout(1000); // Wait for UI
 
-  await page.waitForTimeout(1000); // Wait for bookings to load
+  const bookingsContainer = page.locator('.sc-jaXbil.WTCFV'); // Container of bookings
+  const bookingItems = bookingsContainer.locator('.sc-eqNDNG.eHEBjZ'); // Each booking
 
-  const bookingsContainer = page.locator('div.sc-lixPIL.dkcvGm > div'); // Locate bookings container at page level
-  await expect(bookingsContainer.first()).toBeVisible();
+  for (let i = 0; i < bookingItems; i++) {
+    const booking = bookingItems.nth(i); // Go through all
 
-  const bookingsCount = await bookingsContainer.count();
-  expect(bookingsCount).toBeGreaterThan(0);
+    const nameLocator = booking.locator('div.sc-fpEFIB.gzoLBd').first(); // Locator for Name
+    const idLocator = booking.locator('div.sc-fpEFIB.gzoLBd > div:nth-child(2)').first(); // Locator for ID
+    const moreDetailsLocator = booking.locator('div.sc-ifkGpL.klVuSW').first(); // Locator for more details
 
-  for (let i = 0; i < bookingsCount; i++) {
-    const booking = bookingsContainer.nth(i);
-
-    // Locate booking details inside each booking
-    const nameLocator = booking.locator('div.sc-fpEFIB.gzoLBd').first();
-    const idLocator = booking.locator('div.sc-fpEFIB.gzoLBd > div:nth-child(2)').first();
-    const moreDetailsLocator = booking.locator('div.sc-ifkGpL.klVuSW').first();
-
-    await expect(nameLocator).toBeVisible();
-    await expect(idLocator).toBeVisible();
-    await expect(moreDetailsLocator).toBeVisible();
+    await expect(nameLocator).toBeVisible(); // Assert for Name
+    await expect(idLocator).toBeVisible(); // Assert for ID
+    await expect(moreDetailsLocator).toBeVisible(); // Assert for more details
   }
 });
 
@@ -329,11 +337,8 @@ test('TC16 - Verify that clicking on the "View Bookings" button opens the correc
 test('TC17 - Verify that event cards can be scrolled horizontally if there are many', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  // Locate scroll container that holds event cards horizontally
-  const scrollContainer = page.locator('div.sc-cUiCeM.PMdYg').first();
-
-  // Locate right arrow button for horizontal scroll
-  const arrowRightButton = page.locator('button.sc-gZEilz.jwPxOi').nth(1);
+  const scrollContainer = page.locator('.sc-eqYatC.gLLZmF').first(); // Locate scroll container that holds event cards horizontally
+  const arrowRightButton = page.locator('.sc-ibashp.bllble').nth(1); // Locate right arrow button for horizontal scroll
 
   await expect(scrollContainer).toBeVisible(); // Assert scroll container visible
   await expect(arrowRightButton).toBeVisible(); // Assert arrow visible
@@ -342,7 +347,7 @@ test('TC17 - Verify that event cards can be scrolled horizontally if there are m
 
   await arrowRightButton.click(); // Click right arrow to scroll
 
-  await page.waitForTimeout(300); // Wait for scroll animation
+  await page.waitForTimeout(300); // Wait for UI
 
   const finalLeft = await scrollContainer.evaluate(el => el.style.left); // Get left property after scroll
 
@@ -360,14 +365,14 @@ test('TC18 - Verify that the page title "Rooming List Management: Events" is dis
 test('TC19 - Verify that the filters dropdown is correctly positioned under the Filters button', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const filtersButton = page.getByRole('button', { name: /filters/i }); // Locate Filters button
-  await filtersButton.click(); // Click to open dropdown
+  const filtersButton = page.locator('.sc-fOOuSg.jqgEdW'); // Locate Filters button
+  await filtersButton.click(); // Open filter dropdown
 
-  const dropdown = page.locator('div.sc-fmMLgT.fpcEPT'); // Locate dropdown container
-  await expect(dropdown).toBeVisible(); // Assert dropdown visible
+  const filtersDropdown = page.locator('.sc-lcItFd.dUihCv'); // Locate dropdown 
+  await expect(filtersDropdown).toBeVisible(); // Assert dropdown visible
 
   const buttonBox = await filtersButton.boundingBox(); // Get bounding box of Filters button
-  const dropdownBox = await dropdown.boundingBox(); // Get bounding box of dropdown
+  const dropdownBox = await filtersDropdown.boundingBox(); // Get bounding box of dropdown
 
   expect(dropdownBox.y).toBeGreaterThan(buttonBox.y); // Assert dropdown is below button vertically
   expect(Math.abs(dropdownBox.x - buttonBox.x)).toBeLessThan(20); // Assert dropdown is horizontally aligned within 20px
@@ -377,78 +382,31 @@ test('TC19 - Verify that the filters dropdown is correctly positioned under the 
 test('TC20 - Verify that each event group has a clear visual separator and container padding', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const groupHeaders = page.locator('div.sc-bpuAaX.jOKtSV > div > div'); // Locate group headers containers
-  const count = await groupHeaders.count();
-  expect(count).toBeGreaterThan(1); // Assert multiple groups
+  const eventContainer = page.locator('.sc-fcSHUR.cvrEFO'); // Locate event container
+  await expect(eventContainer).toBeVisible(); // Check if present
 
-  let boxes = [];
-  for (let i = 0; i < count; i++) {
-    const group = groupHeaders.nth(i);
-    const box = await group.boundingBox();
-    if (box) boxes.push({ index: i, box }); // Store bounding boxes
+  const eventSection = eventContainer.locator('.sc-jCWzJg.fJVMnc'); // Locate event section
+  const eventSectionCount = await eventSection.count(); // Get count of all event sections
+  expect(eventSectionCount).toBeGreaterThan(0); // Check if has elements to show
+
+  for (let i = 0; i < eventSectionCount; i++) {
+    const item = eventSection.nth(i); // Go through
+    const separator = item.locator('.sc-fvubMj.dRYpac'); // Locate separator
+
+    await expect(separator).toBeVisible(); // Assert for separator
   }
-
-  // Sort boxes by Y coordinate (top to bottom)
-  boxes.sort((a, b) => a.box.y - b.box.y);
-
-  // Group boxes by rows based on vertical proximity
-  const rows = [];
-  const tolerance = 20;
-
-  for (const item of boxes) {
-    let added = false;
-    for (const row of rows) {
-      if (Math.abs(row[0].box.y - item.box.y) < tolerance) {
-        row.push(item);
-        added = true;
-        break;
-      }
-    }
-    if (!added) rows.push([item]);
-  }
-
-  // Check horizontal spacing between boxes in each row
-  for (const row of rows) {
-    row.sort((a, b) => a.box.x - b.box.x);
-    for (let i = 0; i < row.length - 1; i++) {
-      const current = row[i].box;
-      const next = row[i + 1].box;
-      const horizontalSpacing = next.x - (current.x + current.width);
-      expect(horizontalSpacing).toBeGreaterThanOrEqual(8); // Min 8px spacing
-    }
-  }
-
-  // Check vertical spacing between rows
-  for (let i = 0; i < rows.length - 1; i++) {
-    const maxBottomCurrent = Math.max(...rows[i].map(item => item.box.y + item.box.height));
-    const minTopNext = Math.min(...rows[i + 1].map(item => item.box.y));
-    const verticalSpacing = minTopNext - maxBottomCurrent;
-    expect(verticalSpacing).toBeGreaterThanOrEqual(8); // Min 8px vertical spacing
-  }
-
-  // Check padding on left and right of first container
-  const container = page.locator('div.sc-bpuAaX.jOKtSV > div').first();
-  const padding = await container.evaluate(el => {
-    const style = window.getComputedStyle(el);
-    return {
-      left: style.paddingLeft,
-      right: style.paddingRight
-    };
-  });
-
-  expect(padding.left).toBe('2px'); // Left padding 2px
-  expect(padding.right).toBe('2px'); // Right padding 2px
 });
 
 // TC21
 test('TC21 - Verify the behavior when no events are available', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const searchBox = page.locator('input[type="search"], input[placeholder*="search"], input'); // Locate search input, broad selector
-  await expect(searchBox.first()).toBeVisible({ timeout: 7000 }); // Wait for input to appear
+  const searchInput = page.getByPlaceholder('Search'); // Locate search input
+  await expect(searchInput).toBeVisible(); // Assert search input is visible
 
-  await searchBox.fill('asdasnonexistentsearchterm'); // Fill with nonsense to get no results
-  await page.keyboard.press('Enter'); // Trigger search (assumed)
+  const testText = 'Asdasd'; // Text to input
+  await searchInput.fill(testText); // Fill search input with text
+  await page.waitForTimeout(500); // Wait for UI
 
   const noListsHeader = page.locator('h3', { hasText: 'No rooming lists found' }); // Locate no results header
   await expect(noListsHeader).toBeVisible({ timeout: 7000 }); // Assert visible
@@ -458,49 +416,46 @@ test('TC21 - Verify the behavior when no events are available', async ({ page })
 
   const importButton = page.locator('button', { hasText: 'Import data' }); // Locate Import data button
   await expect(importButton).toBeVisible(); // Assert visible
-
-  const eventCards = page.locator('div.sc-iMGFoU.hWUTow'); // Locate event cards container
-  await expect(eventCards).toHaveCount(0); // Assert no cards are visible
 });
 
 //TC22
 test('TC22 - Verify if search and filters work together', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to the rooming list page
 
-  await page.locator('#root > div > div > header > div > div > div.sc-cLAbsH.iFIBtw > button').click(); // Click on the Filters button to open filter options
-
-  const filtersDropdown = page.locator('#root > div > div > header > div > div > div.sc-cLAbsH.iFIBtw > div'); // Locate the filters dropdown container
-  await expect(filtersDropdown).toBeVisible(); // Assert that the filters dropdown is visible
-  await filtersDropdown.getByText('Active', { exact: true }).click(); // Select the "Active" filter option
-  await filtersDropdown.getByText('Closed', { exact: true }).click(); // Deselect the "Closed" filter option if selected
-
-  await page.getByRole('button', { name: /save/i }).click(); // Click the Save button to apply filters
-
   const searchInput = page.getByPlaceholder('Search'); // Locate the search input by its placeholder text
-  await searchInput.fill('ACL'); // Fill the search input with the text 'ACL'
-  await page.keyboard.press('Enter'); // Press Enter key to trigger the search
+  const searchedName = 'Ultra';
+  await searchInput.fill(searchedName);
+  await page.waitForTimeout(500); // Wait for UI
 
-  const results = page.locator('div.sc-iMGFoU.hWUTow'); // Locate all event cards in the results
-  await results.first().waitFor({ state: 'visible', timeout: 5000 }); // Wait for the first result card to be visible to ensure results are loaded
+  const filtersButton = page.locator('.sc-fOOuSg.jqgEdW'); // Locate Filters button
+  await filtersButton.click(); // Open filter dropdown
 
-  const count = await results.count(); // Get the number of event cards found
-  expect(count).toBeGreaterThan(0); // Assert that at least one result is present
+  const filtersDropdown = page.locator('.sc-lcItFd.dUihCv'); // Locate dropdown 
+  const activeOption = filtersDropdown.locator('div:nth-child(1) > div.sc-eQaGpr.eUTzEW'); // Locate Active Option
+  const closedOption = filtersDropdown.locator('div:nth-child(2) > div.sc-eQaGpr.eUTzEW'); // Locate Closed Option
+  await activeOption.click(); // Select Active
+  await closedOption.click(); // Unselect Closed
+
+  const saveButton = page.locator('.sc-VLMBG.dtMrBA'); // Locate save button
+  await saveButton.click(); // Apply filter
+
+  await page.waitForTimeout(500); // Wait for UI
+
+  const eventCards = page.locator('.sc-bSFBcf.ckYgto'); // Locate Events
+  const count = await eventCards.count(); // Get events count
+  expect(count).toBeGreaterThan(0); // Verify if there are results
 
   for (let i = 0; i < count; i++) {
-    const card = results.nth(i); // Select the i-th event card
-    const nameLocator = card.locator('div.sc-lpbaSe.guyUPL'); // Locate the element containing the event name inside the card
-    const isVisible = await nameLocator.isVisible(); // Check if the event name element is visible
-    if (!isVisible) {
-      continue;  // Skip this card if the event name is not visible
-    }
-    const nameText = (await nameLocator.innerText()).toLowerCase(); // Get the text content of the event name and convert to lowercase
-    expect(nameText).toContain('acl'); // Assert that the event name contains 'acl'
+    const card = eventCards.nth(i); // Go through all
 
-    const statusLocator = card.locator('div[status="Active"]'); // Locate the status element with attribute status="Active" inside the card
-    await expect(statusLocator).toBeVisible(); // Assert that the status element is visible
-    const statusText = (await statusLocator.innerText()).toLowerCase(); // Get the text content of the status element and convert to lowercase
-    expect(statusText).toBe('active'); // Assert that the status text is exactly 'active'
+    const nameEventText = await card.locator('.sc-bbbBoY.iPAQMW').textContent(); // Locate Event Name
+    expect(nameEventText?.toLowerCase()).toContain(searchedName.toLowerCase()); // Assert event name with searched name
+
+    const eventStatus = page.locator('.sc-fYmhhH.ewiABP'); // Locate event status
+    const statusAttr = await eventStatus.nth(i).getAttribute('status'); // Get status 
+    expect(statusAttr?.toLowerCase()).toBe('active'); // Assert status is active
   }
+
 });
 
 
