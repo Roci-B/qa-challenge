@@ -1,8 +1,561 @@
 const { test, expect } = require('@playwright/test');
 
+// TC01
 test('TC01 - Verify that the Search input is displayed', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list');
-  const searchInput = page.getByPlaceholder('Search'); // O ajustá según tu frontend
+  const searchInput = page.locator('.sc-gjZUHa.fhNaUA');
   await expect(searchInput).toBeVisible();
+});
+
+// TC02
+
+test('TC02 - Verify that a user can type text into the Search input', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+  const searchInput = page.locator('.sc-gjZUHa.fhNaUA');
+  await expect(searchInput).toBeVisible();
+
+  const testText = 'My Search';
+  await searchInput.fill(testText);
+  await expect(searchInput).toHaveValue(testText);
+});
+
+// TC03
+
+test('TC03 - Verify that searching filters the list of events based on input', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const searchInput = page.locator('.sc-gjZUHa.fhNaUA');
+  const eventItems = page.locator('.sc-bmCFzp.kQijna');
+  
+  const totalEvents = await eventItems.count();
+  expect(totalEvents).toBeGreaterThan(0); 
+
+  const filter = 'Suite';
+  await searchInput.fill(filter);
+
+  await page.waitForTimeout(500);
+
+  const filteredEvents = await eventItems.count();
+  expect(filteredEvents).toBeLessThanOrEqual(totalEvents);
+
+  for (let i = 0; i < filteredEvents; i++) {
+    const textEvent = await eventItems.nth(i).innerText();
+    expect(textEvent.toLowerCase()).toContain(filter.toLowerCase());
+  }
+});
+
+// TC04
+
+test("TC04 - Verify that if no matching event is found, a 'no results' message appears", async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const searchInput = page.locator('.sc-gjZUHa.fhNaUA');
+  const noExistingFilter = 'NewEvent123';
+
+  await searchInput.fill(noExistingFilter);
+  await page.waitForTimeout(500);
+
+  const noResultsMessage = page.getByText(/No rooming lists found/i); 
+
+  await expect(noResultsMessage).toBeVisible();
+});
+
+// TC05
+
+test('TC05 - Verify that the Filters button is displayed', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const filtersButton = page.getByRole('button', { name: /Filters/i });
+
+  await expect(filtersButton).toBeVisible();
+});
+
+// TC06
+
+test('TC06 - Verify that clicking the Filters button opens the filter dropdown', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const filtersButton = page.getByRole('button', { name: /filters/i });
+  await expect(filtersButton).toBeVisible();
+
+  await filtersButton.click();
+  await page.waitForTimeout(500);
+
+  const dropdown = page.locator('.sc-cLAbsH.iFIBtw'); 
+  await expect(dropdown).toBeVisible();
+});
+
+// TC07
+
+test("TC07 - Verify that the filter options are 'Active', 'Closed', and 'Canceled'", async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const filtersButton = page.getByRole('button', { name: /filters/i });
+  await expect(filtersButton).toBeVisible();
+  await filtersButton.click();
+
+  const activeOption = page.locator("#root > div > div > header > div > div > div.sc-cLAbsH.iFIBtw > div > div > div > div.sc-fmMLgT.fpcEPT > div:nth-child(1) > div.sc-ejXKMB.bmPpUn");
+  const closedOption = page.locator("#root > div > div > header > div > div > div.sc-cLAbsH.iFIBtw > div > div > div > div.sc-fmMLgT.fpcEPT > div:nth-child(2) > div.sc-ejXKMB.bmPpUn");
+  const canceledOption = page.locator("#root > div > div > header > div > div > div.sc-cLAbsH.iFIBtw > div > div > div > div.sc-fmMLgT.fpcEPT > div:nth-child(3) > div.sc-ejXKMB.bmPpUn");
+  
+  await expect(activeOption).toBeVisible();
+  await expect(closedOption).toBeVisible();
+  await expect(canceledOption).toBeVisible();
+});
+
+// TC08
+
+test('TC08 - Verify that selecting a filter option filters the event list correctly', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const filtersButton = page.locator('button:has-text("Filters")');
+  await filtersButton.click();
+
+  const activeOption = page.locator("#root > div > div > header > div > div > div.sc-cLAbsH.iFIBtw > div > div > div > div.sc-fmMLgT.fpcEPT > div:nth-child(1) > div.sc-ejXKMB.bmPpUn");
+  await activeOption.click();
+
+  const statusElements = page.locator('div.sc-fsjlER.ljkdaL');
+  await expect(statusElements.first()).toBeVisible();
+
+  const count = await statusElements.count();
+  for (let i = 0; i < count; i++) {
+    const statusAttr = await statusElements.nth(i).getAttribute('status');
+    expect(statusAttr?.toLowerCase()).toBe('active');
+  }
+});
+
+// TC09
+
+test('TC09 - Verify that the "Save" button applies the selected filter', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+  
+  const filtersButton = page.locator('button:has-text("Filters")');
+  await filtersButton.click();
+
+  const saveButton = page.locator('button:has-text("Save")');
+  await saveButton.click();
+
+  const statusElements = page.locator('div.sc-fsjlER'); 
+
+  await expect(statusElements.first()).toBeVisible();
+  const count = await statusElements.count();
+
+  for (let i = 0; i < count; i++) {
+    const status = await statusElements.nth(i).getAttribute('status');
+    expect(status?.toLowerCase()).toBe('closed');
+  }
+});
+
+// TC10
+
+test('TC10 - Verify that after applying a filter, the selected filter persists if the Filters dropdown is reopened', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+  
+  const filtersButton = page.locator('button:has-text("Filters")');
+  await filtersButton.click();
+
+  const filterDropdown = page.locator('div.sc-fmMLgT.fpcEPT');
+  const activeOption = filterDropdown.getByText('Active', { exact: true });
+  await activeOption.click();
+
+  const saveButton = page.locator('button:has-text("Save")');
+  await saveButton.click();
+
+  await filtersButton.click();
+
+  expect(true).toBe(true);
+});
+
+// TC11
+
+test('TC11 - Verify that multiple filters can be selected/deselected', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+  
+  const filtersButton = page.locator('button:has-text("Filters")');
+  await filtersButton.click();
+
+  const filterDropdown = page.locator('div.sc-fmMLgT.fpcEPT');
+  const activeOption = filterDropdown.getByText('Active', { exact: true });
+  const closedOption = filterDropdown.getByText('Closed', { exact: true });
+
+  await activeOption.click();
+  await closedOption.click();
+
+  const printInfo = async (locator) => {
+    const clases = await locator.getAttribute('class');
+    const attrs = await locator.evaluate(el => {
+      const result = {};
+      for (const attr of el.attributes) {
+        result[attr.name] = attr.value;
+      }
+      return result;
+    });
+  };
+
+  await printInfo(activeOption);
+  await printInfo(closedOption);
+
+  await page.waitForTimeout(500);
+  await activeOption.click();
+
+  await printInfo(activeOption);
+
+  const saveButton = page.locator('button:has-text("Save")');
+  await saveButton.click();
+
+  expect(true).toBe(true); 
+});
+
+// TC12
+
+test('TC12 - Verify that event cards are grouped by event names', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+  
+  const groupHeaders = page.locator('div.sc-lpbaSe.guyUPL');
+  const groupCount = await groupHeaders.count();
+
+  expect(groupCount).toBeGreaterThan(0);
+  
+  for (let i = 0; i < groupCount; i++) {
+    const group = groupHeaders.nth(i);
+    const groupName = await group.innerText();
+  }
+});
+
+// TC13
+
+
+test('TC13 - Verify that each event card displays RFP name, Agreement type, and Cut-Off Date', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const rfpNames = page.locator('div.sc-lpbaSe.guyUPL');
+  const agreementTypes = page.locator('div.sc-bxjEGZ.coxujC');
+  const cutOffDates = page.locator('div.sc-kiMgGE.fRojhS');
+
+  const rfpCount = await rfpNames.count();
+  const agreementCount = await agreementTypes.count();
+  const cutOffCount = await cutOffDates.count();
+
+  expect(rfpCount).toBeGreaterThan(0);
+  expect(agreementCount).toBe(rfpCount);
+  expect(cutOffCount).toBe(rfpCount);
+
+  for (let i = 0; i < rfpCount; i++) {
+    const rfp = rfpNames.nth(i);
+    const agreement = agreementTypes.nth(i);
+    const cutOff = cutOffDates.nth(i);
+
+    await expect(rfp).toBeVisible();
+    await expect(agreement).toBeVisible();
+    await expect(cutOff).toBeVisible();
+
+    const rfpText = await rfp.innerText();
+    const agreementText = await agreement.innerText();
+    const cutOffText = await cutOff.innerText();
+
+    expect(rfpText.trim()).not.toBe('');
+    expect(agreementText.trim()).not.toBe('');
+    expect(cutOffText.trim()).not.toBe('');
+  }
+});
+
+// TC14
+test('TC14 - Verify that the "View Bookings" button is displayed on each event card', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const eventCards = page.locator('div.sc-iMGFoU.hWUTow');
+
+  const cardCount = await eventCards.count();
+  expect(cardCount).toBeGreaterThan(0);
+
+  for (let i = 0; i < cardCount; i++) {
+    const card = eventCards.nth(i);
+    const viewBookingsButton = card.locator('button.sc-kRZjnb.uEwrw', { hasText: 'View Bookings' });
+    await expect(viewBookingsButton).toBeVisible();
+  }
+});
+
+// TC15
+test('TC15 - Verify that the "View Bookings" button displays the correct number of bookings', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  // Obtener todas las tarjetas de evento
+  const eventCards = page.locator('div.sc-iMGFoU.hWUTow');
+  const cardCount = await eventCards.count();
+  expect(cardCount).toBeGreaterThan(0);
+
+  for (let i = 0; i < cardCount; i++) {
+    const card = eventCards.nth(i);
+
+    // Botón "View Bookings"
+    const viewBookingsButton = card.locator('button.sc-kRZjnb.uEwrw', { hasText: 'View Bookings' });
+    await expect(viewBookingsButton).toBeVisible();
+
+    // Extraer el número entre paréntesis en el texto del botón
+    const buttonText = await viewBookingsButton.textContent();
+    const match = buttonText?.match(/\((\d+)\)/);
+    const bookingsNumberInButton = match ? Number(match[1]) : 0;
+
+    // Hacer click para mostrar bookings
+    await viewBookingsButton.click();
+
+    // Esperar que los bookings se muestren
+    const bookingBox = card.locator('sc-etfXYe BpA-Dm');
+    await expect(bookingBox).toBeVisible();
+    const bookingItems = card.locator('.sc-dKKIkQ.dxQRDf');
+    await bookingItems.first().waitFor({ state: 'visible', timeout: 5000 });
+
+    // Contar bookings visibles
+    const bookingsCount = await bookingItems.count();
+
+    // Comparar números
+    expect(bookingsNumberInButton).toBe(bookingsCount);
+  }
+});
+
+
+// TC16
+
+test('TC16 - Verify that clicking on the "View Bookings" button opens the correct booking details', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const eventCards = page.locator('div.sc-iMGFoU.hWUTow');
+  const cardCount = await eventCards.count();
+  expect(cardCount).toBeGreaterThan(0);
+
+  // Probamos solo la primera tarjeta para este test
+  const firstCard = eventCards.nth(0);
+
+  // Botón "View Bookings"
+  const viewBookingsButton = firstCard.locator('button.sc-kRZjnb.uEwrw', { hasText: 'View Bookings' });
+  await expect(viewBookingsButton).toBeVisible();
+
+  // Click en el botón para desplegar bookings
+  await viewBookingsButton.click();
+
+  // Esperamos a que se muestren las tarjetas de bookings dentro de la primera tarjeta
+  const bookingBox = card.locator('sc-etfXYe BpA-Dm');
+  await expect(bookingBox).toBeVisible();
+
+  const bookingsCount = await bookingsContainer.count();
+  expect(bookingsCount).toBeGreaterThan(0);
+
+  // Ahora para cada booking verificamos que los 3 detalles estén visibles
+  for (let i = 0; i < bookingsCount; i++) {
+    const booking = bookingsContainer.nth(i);
+
+    // Selectores para cada detalle dentro de la tarjeta booking
+    const nameLocator = booking.locator('div.sc-fpEFIB.gzoLBd');
+    const idLocator = booking.locator('div.sc-fpEFIB.gzoLBd > div:nth-child(2)');
+    const moreDetailsLocator = booking.locator('div.sc-ifkGpL.klVuSW');
+
+    // Verificar visibilidad de cada detalle
+    await expect(nameLocator.first()).toBeVisible();
+    await expect(idLocator.first()).toBeVisible();
+    await expect(moreDetailsLocator.first()).toBeVisible();
+  }
+});
+
+// TC17
+test('TC17 - Verify that event cards can be scrolled horizontally if there are many', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const scrollContainer = page.locator('div.sc-cUiCeM.PMdYg');
+  const arrowRight = page.locator('button.sc-gZEilz.jwPxOi').nth(1); // Flecha derecha
+
+  // Esperar que los elementos estén visibles
+  await expect(scrollContainer).toBeVisible();
+  await expect(arrowRight).toBeVisible();
+
+  // Obtener valor inicial de style.left
+  const initialLeft = await scrollContainer.evaluate(el => el.style.left);
+
+  // Click en flecha derecha
+  await arrowRight.click();
+
+  // Esperar un poco para que se aplique el nuevo estilo
+  await page.waitForTimeout(300);
+
+  // Obtener valor final
+  const finalLeft = await scrollContainer.evaluate(el => el.style.left);
+
+  // Validar que haya cambiado
+  expect(initialLeft).not.toBe(finalLeft);
+});
+
+
+// TC18
+test('TC18 - Verify that the page title "Rooming List Management: Events" is displayed', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  // Intentar ubicar el título exacto en el DOM
+  const pageTitle = page.getByText('Rooming List Management: Events', { exact: true });
+
+  // Asegurarse de que esté visible
+  await expect(pageTitle).toBeVisible();
+});
+
+
+// TC19
+test('TC19 - Verify that the filters dropdown is correctly positioned under the Filters button', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  const filtersButton = page.getByRole('button', { name: /filters/i });
+  await filtersButton.click();
+
+  // Localizar el dropdown (ajustá el selector si usás otro)
+  const dropdown = page.locator('div.sc-fmMLgT.fpcEPT');
+  await expect(dropdown).toBeVisible();
+
+  // Obtener bounding boxes
+  const buttonBox = await filtersButton.boundingBox();
+  const dropdownBox = await dropdown.boundingBox();
+
+  // Validar alineación (puede depender del diseño de UI, estos son ejemplos comunes)
+  expect(dropdownBox.y).toBeGreaterThan(buttonBox.y); // debe estar por debajo verticalmente
+  expect(Math.abs(dropdownBox.x - buttonBox.x)).toBeLessThan(20); // alineado horizontalmente (ajustable)
+});
+
+
+// TC20
+test('TC20 - Verify that each event group has a clear visual separator and container padding', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  // Seleccionamos los grupos dentro del contenedor principal
+  const groupHeaders = page.locator('div.sc-bpuAaX.jOKtSV > div > div');
+  const count = await groupHeaders.count();
+  expect(count).toBeGreaterThan(1); // Aseguramos que haya más de un grupo
+
+  for (let i = 0; i < count - 1; i++) {
+    const currentGroup = groupHeaders.nth(i);
+    const nextGroup = groupHeaders.nth(i + 1);
+
+    const currentBox = await currentGroup.boundingBox();
+    const nextBox = await nextGroup.boundingBox();
+
+    const verticalSpacing = nextBox.y - (currentBox.y + currentBox.height);
+
+    console.log(`Espaciado vertical entre grupo ${i} y ${i + 1}:`, verticalSpacing);
+
+    // Validamos al menos 8px de separación
+    expect(verticalSpacing).toBeGreaterThanOrEqual(8);
+  }
+
+  // Extra: validamos padding de los lados
+  const container = page.locator('div.sc-bpuAaX.jOKtSV > div');
+  const padding = await container.evaluate(el => {
+    const style = window.getComputedStyle(el);
+    return {
+      left: style.paddingLeft,
+      right: style.paddingRight
+    };
+  });
+
+  expect(padding.left).toBe('2px');
+  expect(padding.right).toBe('2px');
+});
+
+
+
+
+// TC21
+test('TC21 - Verify the behavior when no events are available', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  // Buscar 'asdas' en el search box para forzar estado vacío
+  const searchBox = page.locator('input[type="search"]');
+  await searchBox.fill('asdas');
+  await page.keyboard.press('Enter'); // o esperar que filtre automáticamente según implementación
+
+  // Esperar que se muestre el mensaje de no hay listas
+  const noListsHeader = page.locator('#root > div > div > h3', { hasText: 'No rooming lists found' });
+  await expect(noListsHeader).toBeVisible();
+
+  // Verificar texto de ayuda
+  const helpText = page.locator('#root > div > div > p', { hasText: 'Import data to see rooming lists for your events.' });
+  await expect(helpText).toBeVisible();
+
+  // Verificar botón "Import data"
+  const importButton = page.locator('#root > div > div > button', { hasText: 'Import data' });
+  await expect(importButton).toBeVisible();
+
+  // Verificar que no haya cards visibles
+  const eventCards = page.locator('div.sc-iMGFoU.hWUTow');
+  const cardCount = await eventCards.count();
+  expect(cardCount).toBe(0);
+});
+
+
+
+// TC22
+test('TC22 - Verify if search and filters work together', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  // 1. Abrir menú de filtros
+  await page.getByRole('button', { name: /filters/i }).click();
+
+  // 2. Esperar a que se muestre el dropdown de filtros
+  const filtersDropdown = page.locator('div[role="dialog"], div[role="menu"], div[aria-label="Filters"]');
+  await expect(filtersDropdown).toBeVisible();
+
+  // 3. Seleccionar "Active"
+  const activeFilter = filtersDropdown.getByText('Active', { exact: true });
+  await activeFilter.waitFor({ state: 'visible' });
+  await activeFilter.click();
+
+  // 4. Deseleccionar "Closed" (si está seleccionada)
+  const closedFilter = filtersDropdown.getByText('Closed', { exact: true });
+  await closedFilter.waitFor({ state: 'visible' });
+  await closedFilter.click();
+
+  // 5. Guardar filtros
+  await page.getByRole('button', { name: /save/i }).click();
+
+  // 6. Buscar "ACL"
+  const searchInput = page.getByPlaceholder('Search'); // Ajustar placeholder si cambia
+  await searchInput.fill('ACL');
+  await page.waitForTimeout(1000); // O reemplazar por espera más específica si hay loading
+
+  // 7. Verificar resultados visibles
+  const results = page.locator('.event-card'); // Ajustá si el selector es diferente
+  const count = await results.count();
+  expect(count).toBeGreaterThan(0);
+
+  for (let i = 0; i < count; i++) {
+    const card = results.nth(i);
+    const text = (await card.innerText()).toLowerCase();
+    
+    // Confirmar que el nombre contiene "acl"
+    expect(text).toContain('acl');
+
+    // Confirmar que el estado es "active"
+    expect(text).toContain('active'); // O buscar un atributo si tenés uno más confiable
+  }
+});
+
+
+
+// TC23
+test('TC23 - Verify UI responsiveness', async ({ page }) => {
+  await page.goto('http://localhost:3000/rooming-list');
+
+  // Verificamos en tamaño desktop
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const layoutDesktop = page.locator('main'); // ajustar según el contenedor principal
+  await expect(layoutDesktop).toBeVisible();
+
+  // Cambiar a tamaño tablet
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await expect(layoutDesktop).toBeVisible(); // Verificar que los elementos sigan visibles
+
+  // Cambiar a tamaño mobile
+  await page.setViewportSize({ width: 375, height: 667 }); // iPhone 6/7/8
+  await expect(layoutDesktop).toBeVisible();
+
+  // Verificar que no haya scroll horizontal
+  const hasScroll = await page.evaluate(() => {
+    return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+  });
+  expect(hasScroll).toBe(false); // El contenido no debe desbordarse horizontalmente
 });
 

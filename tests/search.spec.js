@@ -3,14 +3,14 @@ const { test, expect } = require('@playwright/test');
 // TC01
 test('TC01 - Verify that the Search input is displayed', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to the page
-  const searchInput = page.locator('.sc-gjZUHa.fhNaUA'); // Locate search input by CSS class
+  const searchInput = page.getByPlaceholder('Search'); // Locate search input
   await expect(searchInput).toBeVisible(); // Assert search input is visible
 });
 
 // TC02
 test('TC02 - Verify that a user can type text into the Search input', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to the page
-  const searchInput = page.locator('.sc-gjZUHa.fhNaUA'); // Locate search input
+  const searchInput = page.getByPlaceholder('Search'); // Locate search input
   await expect(searchInput).toBeVisible(); // Assert search input is visible
 
   const testText = 'My Search'; // Text to input
@@ -22,13 +22,13 @@ test('TC02 - Verify that a user can type text into the Search input', async ({ p
 test('TC03 - Verify that searching filters the list of events based on input', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to the page
 
-  const searchInput = page.locator('.sc-gjZUHa.fhNaUA'); // Locate search input
-  const eventItems = page.locator('.sc-bmCFzp.kQijna'); // Locate event items
+  const searchInput = page.getByPlaceholder('Search'); // Locate search input
+  const eventItems = page.locator('.sc-jCWzJg.fJVMnc'); // Locate event items
 
   const totalEvents = await eventItems.count(); // Count total events
   expect(totalEvents).toBeGreaterThan(0); // Assert there are events
 
-  const filterText = 'Suite'; // Filter term
+  const filterText = 'Artist'; // Filter term
   await searchInput.fill(filterText); // Fill search input with filter
 
   await page.waitForTimeout(500); // Wait for filtering to update
@@ -46,7 +46,7 @@ test('TC03 - Verify that searching filters the list of events based on input', a
 test("TC04 - Verify that if no matching event is found, a 'no results' message appears", async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to the page
 
-  const searchInput = page.locator('.sc-gjZUHa.fhNaUA'); // Locate search input
+  const searchInput = page.getByPlaceholder('Search'); // Locate search input
   const nonExistentFilter = 'NewEvent123'; // Search term with no matches
 
   await searchInput.fill(nonExistentFilter); // Fill search input
@@ -61,7 +61,7 @@ test("TC04 - Verify that if no matching event is found, a 'no results' message a
 test('TC05 - Verify that the Filters button is displayed', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to the page
 
-  const filtersButton = page.getByRole('button', { name: /Filters/i }); // Locate Filters button by role and name
+  const filtersButton = page.locator('.sc-fOOuSg.jqgEdW'); // Locate Filters button
 
   await expect(filtersButton).toBeVisible(); // Assert Filters button is visible
 });
@@ -70,13 +70,13 @@ test('TC05 - Verify that the Filters button is displayed', async ({ page }) => {
 test('TC06 - Verify that clicking the Filters button opens the filter dropdown', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to the page
 
-  const filtersButton = page.getByRole('button', { name: /filters/i }); // Locate Filters button
+  const filtersButton = page.locator('.sc-fOOuSg.jqgEdW'); // Locate Filters button
   await expect(filtersButton).toBeVisible(); // Assert button is visible
 
   await filtersButton.click(); // Click the Filters button
   await page.waitForTimeout(500); // Wait for dropdown to appear
 
-  const filtersDropdown = page.locator('.sc-cLAbsH.iFIBtw'); // Locate dropdown container
+  const filtersDropdown = page.locator('.sc-lcItFd.dUihCv'); // Locate dropdown 
   await expect(filtersDropdown).toBeVisible(); // Assert dropdown is visible
 });
 
@@ -84,37 +84,45 @@ test('TC06 - Verify that clicking the Filters button opens the filter dropdown',
 test("TC07 - Verify that the filter options are 'Active', 'Closed', and 'Canceled'", async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const filtersButton = page.getByRole('button', { name: /filters/i }); // Locate Filters button
+  const filtersButton = page.locator('.sc-fOOuSg.jqgEdW'); // Locate Filters button
   await expect(filtersButton).toBeVisible(); // Assert visible
   await filtersButton.click(); // Click button to open dropdown
 
-  // Locate filter options inside dropdown using consistent selector
-  const filtersDropdown = page.locator('.sc-cLAbsH.iFIBtw');
-  const activeOption = filtersDropdown.locator('div:nth-child(1) > div.sc-ejXKMB.bmPpUn');
-  const closedOption = filtersDropdown.locator('div:nth-child(2) > div.sc-ejXKMB.bmPpUn');
-  const canceledOption = filtersDropdown.locator('div:nth-child(3) > div.sc-ejXKMB.bmPpUn');
+  const filtersDropdown = page.locator('.sc-lcItFd.dUihCv'); // Locate dropdown 
+  const activeOption = filtersDropdown.locator('div:nth-child(1) > div.sc-eQaGpr.eUTzEW'); // Locate Active Option
+  const closedOption = filtersDropdown.locator('div:nth-child(2) > div.sc-eQaGpr.eUTzEW'); // Locate Closed Option
+  const canceledOption = filtersDropdown.locator('div:nth-child(3) > div.sc-eQaGpr.eUTzEW'); // Locate Cancelled Option
 
-  await expect(activeOption).toBeVisible(); // Assert Active filter visible
-  await expect(closedOption).toBeVisible(); // Assert Closed filter visible
-  await expect(canceledOption).toBeVisible(); // Assert Canceled filter visible
+  const activeText = await activeOption.innerText(); // Check text for Active
+  const closedText = await closedOption.innerText(); // Check text for Closed
+  const canceledText = await canceledOption.innerText(); // Check text for Cancelled
+  
+  await expect(activeText.toLowerCase()).toBe('active'); // Assert texts for Active
+  await expect(closedText.toLowerCase()).toBe('closed'); // Assert text for Closed
+  await expect(canceledText.toLowerCase()).toBe('cancelled');  // Assert text for Cancelled
 });
 
 // TC08
+
 test('TC08 - Verify that selecting a filter option filters the event list correctly', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const filtersButton = page.getByRole('button', { name: /Filters/i }); // Locate Filters button
+  const filtersButton = page.locator('.sc-fOOuSg.jqgEdW'); // Locate Filters button
   await filtersButton.click(); // Open filter dropdown
 
-  const filtersDropdown = page.locator('.sc-cLAbsH.iFIBtw'); // Locate dropdown
-  const activeOption = filtersDropdown.locator('div:nth-child(1) > div.sc-ejXKMB.bmPpUn'); // Locate Active option
-  await activeOption.click(); // Select Active filter
+  const filtersDropdown = page.locator('.sc-lcItFd.dUihCv'); // Locate dropdown 
+  const activeOption = filtersDropdown.locator('div:nth-child(1) > div.sc-eQaGpr.eUTzEW'); // Locate Active Option
+  const closedOption = filtersDropdown.locator('div:nth-child(2) > div.sc-eQaGpr.eUTzEW'); // Locate Closed Option
+  await activeOption.click(); // Select Active
+  await closedOption.click(); // Unselect Closed
 
-  const statusElements = page.locator('div.sc-fsjlER.ljkdaL'); // Locate status elements of events
-  await expect(statusElements.first()).toBeVisible(); // Assert visible
+  const saveButton = page.locator('.sc-VLMBG.dtMrBA'); // Locate save button
+  await saveButton.click(); // Apply filter
 
-  const count = await statusElements.count(); // Get count of status elements
-  for (let i = 0; i < count; i++) {
+  const eventStatus = page.locator('.sc-fYmhhH.ewiABP'); // Locate event status
+  const countEvents = await eventStatus.count(); // Get count of status 
+
+  for (let i = 0; i < countEvents; i++) {
     const statusAttr = await statusElements.nth(i).getAttribute('status'); // Get status attribute
     expect(statusAttr?.toLowerCase()).toBe('active'); // Assert status is active
   }
@@ -124,20 +132,24 @@ test('TC08 - Verify that selecting a filter option filters the event list correc
 test('TC09 - Verify that the "Save" button applies the selected filter', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const filtersButton = page.getByRole('button', { name: /Filters/i }); // Locate Filters button
-  await filtersButton.click(); // Open filters dropdown
+  const filtersButton = page.locator('.sc-fOOuSg.jqgEdW'); // Locate Filters button
+  await filtersButton.click(); // Open filter dropdown
 
-  const saveButton = page.getByRole('button', { name: /Save/i }); // Locate Save button
-  await saveButton.click(); // Click Save button
+  const filtersDropdown = page.locator('.sc-lcItFd.dUihCv'); // Locate dropdown 
+  const canceledOption = filtersDropdown.locator('div:nth-child(3) > div.sc-eQaGpr.eUTzEW'); // Locate Cancelled Option
+  const closedOption = filtersDropdown.locator('div:nth-child(2) > div.sc-eQaGpr.eUTzEW'); // Locate Closed Option
+  await canceledOption.click(); // Select Cancelled
+  await closedOption.click(); // Unselect Closed
 
-  const statusElements = page.locator('div.sc-fsjlER'); // Locate status elements
+  const saveButton = page.locator('.sc-VLMBG.dtMrBA'); // Locate save button
+  await saveButton.click(); // Apply filter
 
-  await expect(statusElements.first()).toBeVisible(); // Assert first is visible
-  const count = await statusElements.count(); // Count status elements
+  const eventStatus = page.locator('.sc-fYmhhH.ewiABP'); // Locate event status
+  const countEvents = await eventStatus.count(); // Get count of status 
 
-  for (let i = 0; i < count; i++) {
-    const status = await statusElements.nth(i).getAttribute('status'); // Get status attribute
-    expect(status?.toLowerCase()).toBe('closed'); // Expect status closed (assumed default filter)
+  for (let i = 0; i < countEvents; i++) {
+    const statusAttr = await statusElements.nth(i).getAttribute('status'); // Get status attribute
+    expect(statusAttr?.toLowerCase()).toBe('cancelled'); // Assert status is active
   }
 });
 
@@ -145,73 +157,73 @@ test('TC09 - Verify that the "Save" button applies the selected filter', async (
 test('TC10 - Verify that after applying a filter, the selected filter persists if the Filters dropdown is reopened', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const filtersButton = page.getByRole('button', { name: /Filters/i }); // Locate Filters button
-  await filtersButton.click(); // Open dropdown
+  const filtersButton = page.locator('.sc-fOOuSg.jqgEdW'); // Locate Filters button
+  await filtersButton.click(); // Open filter dropdown
 
-  const filterDropdown = page.locator('div.sc-fmMLgT.fpcEPT'); // Locate dropdown container
-  const activeOption = filterDropdown.getByText('Active', { exact: true }); // Locate Active filter option
-  await activeOption.click(); // Click Active option
+  const filtersDropdown = page.locator('.sc-lcItFd.dUihCv'); // Locate dropdown 
+  const cancelledOption = filtersDropdown.locator('div:nth-child(3) > div.sc-eQaGpr.eUTzEW'); // Locate Cancelled Option
+  const activeOption = filtersDropdown.locator('div:nth-child(1) > div.sc-eQaGpr.eUTzEW'); // Locate Active Option
+  const closedOption = filtersDropdown.locator('div:nth-child(2) > div.sc-eQaGpr.eUTzEW'); // Locate Closed Option
+  await cancelledOption.click(); // Select Cancelled
+  await activeOption.click(); // Select Active
+  await closedOption.click(); // Unselect Closed
 
-  const saveButton = page.getByRole('button', { name: /Save/i }); // Locate Save button
-  await saveButton.click(); // Click Save button
+  await filtersButton.click(); // Close filter dropdown
+  await filtersButton.click(); // Open filter dropdown
 
-  await filtersButton.click(); // Reopen Filters dropdown
+  const activeCheck = page.locator('text=Active').locator('..').locator('.sc-ixcdjX.dOlUQH svg.sc-dcMTLQ.gNPTOM'); // Locate svg when option is selected
+  const cancelledCheck = page.locator('div:nth-child(3) > div.sc-ixcdjX.dOlUQH > svg.sc-dcMTLQ.gNPTOM'); // Locate svg when option is selected
+  const closedCheck = page.locator('text=Closed').locator('..').locator('.sc-ixcdjX.dOlUQH svg.sc-dcMTLQ.gNPTOM'); // Locate svg when option is selected
 
-  expect(true).toBe(true); // Placeholder assertion (expand as needed)
+  await expect(activeCheck).toBeVisible(); // Assert on Active Option
+  await expect(cancelledCheck).toBeVisible(); // Assert on Cancelled Option
+  await expect(closedCheck).toHaveCount(0); // Assert on Closed Option
 });
 
 // TC11
 test('TC11 - Verify that multiple filters can be selected/deselected', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const filtersButton = page.getByRole('button', { name: /Filters/i }); // Locate Filters button
-  await filtersButton.click(); // Open dropdown
+  const filtersButton = page.locator('.sc-fOOuSg.jqgEdW'); // Locate Filters button
+  await filtersButton.click(); // Open filter dropdown
 
-  const filterDropdown = page.locator('div.sc-fmMLgT.fpcEPT'); // Locate dropdown
-  const activeOption = filterDropdown.getByText('Active', { exact: true }); // Locate Active option
-  const closedOption = filterDropdown.getByText('Closed', { exact: true }); // Locate Closed option
+  const filtersDropdown = page.locator('.sc-lcItFd.dUihCv'); // Locate dropdown 
+  const cancelledOption = filtersDropdown.locator('div:nth-child(3) > div.sc-eQaGpr.eUTzEW'); // Locate Cancelled Option
+  const activeOption = filtersDropdown.locator('div:nth-child(1) > div.sc-eQaGpr.eUTzEW'); // Locate Active Option
+  await cancelledOption.click(); // Select Cancelled
+  await activeOption.click(); // Select Active
 
-  await activeOption.click(); // Select Active filter
-  await closedOption.click(); // Select Closed filter
+  const saveButton = page.locator('.sc-VLMBG.dtMrBA'); // Locate save button
+  await saveButton.click(); // Apply filter
 
-  // Function to print class and attributes (for debugging)
-  const printInfo = async (locator) => {
-    const classes = await locator.getAttribute('class'); // Get classes
-    const attributes = await locator.evaluate(el => {
-      const result = {};
-      for (const attr of el.attributes) {
-        result[attr.name] = attr.value; // Get all attributes
-      }
-      return result;
-    });
-  };
-
-  await printInfo(activeOption); // Debug info for active
-  await printInfo(closedOption); // Debug info for closed
-
-  await page.waitForTimeout(500); // Wait for UI to update
-  await activeOption.click(); // Deselect Active filter
-
-  await printInfo(activeOption); // Debug info after deselect
-
-  const saveButton = page.getByRole('button', { name: /Save/i }); // Locate Save button
-  await saveButton.click(); // Click Save button
-
-  expect(true).toBe(true); // Placeholder assertion (expand if needed)
+  const eventStatus = page.locator('.sc-fYmhhH.ewiABP'); // Locate event status
+  const countEvents = await eventStatus.count(); // Get count of status 
+  
+    for (let i = 0; i < countEvents; i++) {
+      const status = await eventStatus.nth(i).getAttribute('status'); // Get status on each event
+      expect(['active', 'cancelled']).toContain(status?.toLowerCase()); // Assert for status
+    }
 });
 
 // TC12
 test('TC12 - Verify that event cards are grouped by event names', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
+  const eventGroups = page.locator('.sc-erPUmh.bWsJGH'); // Locate Group events 
+  const countGroups = await eventGroups.count(); // Get count of groups events
 
-  const groupHeaders = page.locator('div.sc-lpbaSe.guyUPL'); // Locate group headers by event name
-  const groupCount = await groupHeaders.count(); // Count groups
+  for (let i = 0; i < countGroups; i++) {
+    const group = eventGroups.nth(i); // Group all events
+    const groupNameElements = group.locator('.sc-iRTMaw.sWAKf'); // Group Events Names
+    const groupName = (await groupNameElements.nth(0).textContent()).trim(); // Get Names
 
-  expect(groupCount).toBeGreaterThan(0); // Assert at least one group
+    const eventCards = page.locator('.sc-bSFBcf.ckYgto'); // Locate Events
+    const count = await eventCards.count(); // Get events count
+    expect(count).toBeGreaterThan(0); // Verify if there are results
 
-  for (let i = 0; i < groupCount; i++) {
-    const group = groupHeaders.nth(i);
-    const groupName = await group.innerText(); // Get group name text
+    for (let j = 0; j < count; j++) {
+      const eventName = (await eventCards.nth(j).locator('.sc-bbbBoY.iPAQMW').textContent()).trim(); // Get each event name
+      expect(eventName).toBe(groupName); // Assert for Group Events names and each Event name
+    }
   }
 });
 
@@ -219,34 +231,21 @@ test('TC12 - Verify that event cards are grouped by event names', async ({ page 
 test('TC13 - Verify that each event card displays RFP name, Agreement type, and Cut-Off Date', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const rfpNames = page.locator('div.sc-lpbaSe.guyUPL'); // Locate RFP name elements
-  const agreementTypes = page.locator('div.sc-bxjEGZ.coxujC'); // Locate agreement type elements
-  const cutOffDates = page.locator('div.sc-kiMgGE.fRojhS'); // Locate cut-off date elements
+  const eventCards = page.locator('.sc-bSFBcf.ckYgto'); // Locate Events
+  const count = await eventCards.count(); // Get events count
+  expect(count).toBeGreaterThan(0); // Verify if there are results
 
-  const rfpCount = await rfpNames.count();
-  const agreementCount = await agreementTypes.count();
-  const cutOffCount = await cutOffDates.count();
+  for (let i = 0; i < count; i++) {
+    const card = eventCards.nth(i); // Go through all
 
-  expect(rfpCount).toBeGreaterThan(0); // Assert RFP names exist
-  expect(agreementCount).toBe(rfpCount); // Assert agreement count matches RFP count
-  expect(cutOffCount).toBe(rfpCount); // Assert cut-off count matches RFP count
+    const cutOffDate = card.locator('.sc-jytpVa.jCaVtv'); // Locate Cut Off Date
+    await expect(cutOffDate).toBeVisible(); // Assert for Cut Off Date
 
-  for (let i = 0; i < rfpCount; i++) {
-    const rfp = rfpNames.nth(i);
-    const agreement = agreementTypes.nth(i);
-    const cutOff = cutOffDates.nth(i);
+    const agreementType = card.locator('.sc-cdmAjP.gZNFBB'); // Locate Agreement Type
+    await expect(agreementType).toBeVisible(); // Assert for Agreement Type
 
-    await expect(rfp).toBeVisible();
-    await expect(agreement).toBeVisible();
-    await expect(cutOff).toBeVisible();
-
-    const rfpText = await rfp.innerText();
-    const agreementText = await agreement.innerText();
-    const cutOffText = await cutOff.innerText();
-
-    expect(rfpText.trim()).not.toBe('');
-    expect(agreementText.trim()).not.toBe('');
-    expect(cutOffText.trim()).not.toBe('');
+    const rfpName = card.locator('.sc-dNFkOE.cxrKov');// Locate RFP Name
+    await expect(rfpName).toBeVisible();// Assert for RFP Name
   }
 });
 
@@ -254,15 +253,13 @@ test('TC13 - Verify that each event card displays RFP name, Agreement type, and 
 test('TC14 - Verify that the "View Bookings" button is displayed on each event card', async ({ page }) => {
   await page.goto('http://localhost:3000/rooming-list'); // Navigate to page
 
-  const eventCards = page.locator('div.sc-iMGFoU.hWUTow'); // Locate event cards
+  const eventCards = page.locator('.sc-bSFBcf.ckYgto'); // Locate Events
+  const count = await eventCards.count(); // Get events count
+  expect(count).toBeGreaterThan(0); // Verify if there are results
 
-  const cardCount = await eventCards.count(); // Count cards
-  expect(cardCount).toBeGreaterThan(0); // Assert there are cards
-
-  for (let i = 0; i < cardCount; i++) {
-    const card = eventCards.nth(i);
-    // Locate "View Bookings" button inside card by class and text
-    const viewBookingsButton = card.locator('button.sc-kRZjnb.uEwrw', { hasText: 'View Bookings' });
+  for (let i = 0; i < count; i++) {
+    const card = eventCards.nth(i); // Go though all events
+    const viewBookingsButton = card.locator('.sc-DZJJV.tmHpn', { hasText: 'View Bookings' }); // Locate view bookings
     await expect(viewBookingsButton).toBeVisible(); // Assert button visible
   }
 });
